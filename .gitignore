@@ -1,3 +1,5 @@
 .venv/*
 .idea/*
-junk/*
+junk/
+useful commands
+data_engineer_20240329T034831.json
