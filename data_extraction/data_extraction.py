@@ -8,9 +8,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException , TimeoutException
 from selenium.webdriver.common.by import By
 import json
-from data_lake import save_to_hdfs
+from data_ingestion.data_lake import *
 from hdfs import InsecureClient
-
+from datetime import datetime
 def login(driver):
     driver.get('https://www.linkedin.com/login?fromSignIn=true&trk=guest_homepage-basic_nav-header-signin')
 
@@ -96,21 +96,52 @@ def get_the_hiring_infos(driver):
         # Handle cases where elements cannot be found within the timeout period
         return json.dumps({"error": "Timeout No hiring information found"})
 
+def get_jobID(driver):
+    from urllib.parse import urlparse, parse_qs
+
+    # Get the current URL
+    current_url = driver.current_url
+    # Parse the URL using urlparse
+    parsed_url = urlparse(current_url)
+    # Get the query parameters
+    query_params = parse_qs(parsed_url.query)
+    # Access a specific parameter value
+    param_value = query_params.get("currentJobId", [""])[0]
+    return param_value
 
 def get_job_details(driver):
         job_insights = {
+            "jobID": "",
             "remote_status": "",
             "job_type": "",
             "company_size": "",
             "sector": "",
             "skills": "",
+            "stats": "",
+            "scrapping_date": "",
             "Other": ""
         }
+        today_date = datetime.now().strftime("%Y-%m-%d")
+        job_insights["scrapping_date"] = str(today_date)
+        job_insights["jobID"] = get_jobID(driver)
+
+        try :
+            wait = WebDriverWait(driver, 120)
+            stat_element = wait.until(EC.presence_of_element_located((By.XPATH,
+                                                                      "//div[contains(@class, 'job-details-jobs-unified-top-card__primary-description-without-tagline')]")))
+            stat_date_nm_of_application = stat_element.text
+            job_insights["stats"] = str(stat_date_nm_of_application)
+        except (NoSuchElementException, StaleElementReferenceException):
+            return json.dumps({"error": "Some elements were not found or were stale. Proceeding with available data."})
+
 
         try:
-            insights_container = driver.find_element(By.CSS_SELECTOR, "div.mt3.mb2 > ul")
+            insights_container = WebDriverWait(driver, 120).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div.mt2.mb2 > ul"))
+            )
             insights_elements = insights_container.find_elements(By.CSS_SELECTOR,
                                                                  "li.job-details-jobs-unified-top-card__job-insight")
+            time.sleep(5)
 
             for insight in insights_elements:
                 text = insight.text.strip()
@@ -132,8 +163,7 @@ def get_job_details(driver):
                             else:
                                 job_insights["Other"] = span_text
         except (NoSuchElementException, StaleElementReferenceException):
-            return json.dumps({"error": "Some elements were not found or were stale. Proceeding with available data."})
-
+            return json.dumps({"error2": "Some elements were not found or were stale. Proceeding with available data."})
         return json.dumps(job_insights)
 
 def get_job_skills_json(driver):
@@ -350,7 +380,7 @@ def job_extract(driver, name):
                                     job_data['job_insights'] = get_job_details(driver)
                                     job_data['specific_description'] = get_specific_job_description_json(driver)
                                     job_data['skills'] = get_job_skills_json(driver)
-
+                                    print(job_data)
                                     all_jobs.append(job_data)
 
                                 except Exception as e:
@@ -378,7 +408,7 @@ def job_extract(driver, name):
                             job_data['job_insights'] = get_job_details(driver)
                             job_data['specific_description'] = get_specific_job_description_json(driver)
                             job_data['skills'] = get_job_skills_json(driver)
-
+                            print(job_data)
                             all_jobs.append(job_data)
                         print('done')
                         break
@@ -392,7 +422,7 @@ def job_extract(driver, name):
 
     # Convert the list of job details to a JSON string
     jobs_json = json.dumps(all_jobs, indent=4)
-    file_path = '../script-auto-proc/junk/jobs_data.json'  # For example, saving in the 'data' directory of this environment
+    file_path = '/home/aa/PycharmProjects/Linkedin/junk/jobs_data.json'  # For example, saving in the 'data' directory of this environment
 
     # Writing the JSON string to a file
     with open(file_path, 'w') as file:
