@@ -72,11 +72,14 @@ def parse_json_and_process_hirer_infos(df: DataFrame, json_column_name: str, cac
 def parse_json_and_process_job_insights(df: DataFrame, json_column_name: str, cache: bool = False, checkpoint: bool = False) -> DataFrame:
 
     job_insights_schema = StructType([
+        StructField("jobID",StringType(),True),
         StructField("remote_status", StringType(), True),
         StructField("job_type", StringType(), True),
         StructField("company_size", StringType(), True),
         StructField("sector", StringType(), True),
         StructField("skills", StringType(), True),
+        StructField("stats",StringType(),True),
+        StructField('scrapping_date',StringType(),True),
         StructField("Other", StringType(), True),
 
     ])
@@ -139,7 +142,7 @@ def parse_json_and_process_description(df: DataFrame, json_column_name: str, cac
 
 
 if __name__ == "__main__":
-    hdfs_path = 'hdfs://localhost:9000/data_lake/raw/jobs/health_care_research_pharmacy/2024/03/31/health_care_research_pharmacy_20240331T032123.json'
+    hdfs_path = 'hdfs://localhost:9000/data_lake/raw/jobs/health_care_research_pharmacy/2024/04/08/health_care_research_pharmacy_20240408T040745.json'
     df = read_json_from_hadoop_with_spark(hdfs_path)
     details = parse_json_and_process_details(df,"details")
     hirer = parse_json_and_process_hirer_infos(details,"hirer_infos")
