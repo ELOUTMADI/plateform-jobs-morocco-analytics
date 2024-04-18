@@ -14,7 +14,13 @@ def read_json_from_hadoop_with_spark(hdfs_path):
     - The parsed JSON content as a dictionary.
     """
     # Initialize Spark configuration and context
-    spark = SparkSession.builder.appName("Read JSON from Hadoop").getOrCreate()
+    spark = SparkSession.builder.appName("Read JSON from Hadoop") \
+        .config("spark.driver.bindAddress", "127.0.0.1") \
+        .config("spark.driver.port", "4040") \
+        .config("spark.ui.port", "4041") \
+        .config("spark.port.maxRetries", "100") \
+        .getOrCreate()
+
 
     try:
         # Read the JSON file content as RDD

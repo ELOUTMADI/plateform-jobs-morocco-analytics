@@ -10,6 +10,7 @@ from selenium.webdriver.common.by import By
 import json
 from data_ingestion.data_lake import *
 from hdfs import InsecureClient
+
 from datetime import datetime
 def login(driver):
     driver.get('https://www.linkedin.com/login?fromSignIn=true&trk=guest_homepage-basic_nav-header-signin')
@@ -126,6 +127,7 @@ def get_job_details(driver):
         job_insights["jobID"] = get_jobID(driver)
 
         try :
+            time.sleep(8)
             wait = WebDriverWait(driver, 120)
             stat_element = wait.until(EC.presence_of_element_located((By.XPATH,
                                                                       "//div[contains(@class, 'job-details-jobs-unified-top-card__primary-description-without-tagline')]")))
@@ -136,12 +138,14 @@ def get_job_details(driver):
 
 
         try:
+            time.sleep(9)
+
             insights_container = WebDriverWait(driver, 120).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "div.mt2.mb2 > ul"))
             )
             insights_elements = insights_container.find_elements(By.CSS_SELECTOR,
                                                                  "li.job-details-jobs-unified-top-card__job-insight")
-            time.sleep(5)
+            time.sleep(9)
 
             for insight in insights_elements:
                 text = insight.text.strip()
@@ -215,8 +219,17 @@ def get_specific_job_description_json(driver):
     except (NoSuchElementException, StaleElementReferenceException):
         return json.dumps({"error": "Some elements were not found or were stale. Proceeding with available data."})
 
+def get_promoted_status_of_job(job):
+    ul_element = job.find_element(By.CSS_SELECTOR, 'ul.job-card-list__footer-wrapper')
+    li_elements = ul_element.find_elements(By.CSS_SELECTOR, 'li')
 
+    li_texts = []
+    for li in li_elements:
+        text = li.text.strip()
+        if text:
+            li_texts.append(text)
 
+    return li_texts
 def get_job_elements(job):
     try:
         # Check if the job elements are present on the page
@@ -229,8 +242,8 @@ def get_job_elements(job):
         location = location_element.text.strip()
 
         try:
-            promoted_element = job.find_element(By.CLASS_NAME, 'job-card-container__footer-item')
-            is_promoted = "Promoted" in promoted_element.text.strip()
+            promoted_element = get_promoted_status_of_job(job)
+            is_promoted = "Promoted" in promoted_element
             promoted_status = "Promoted" if is_promoted else "Not Promoted"
         except NoSuchElementException:
             promoted_status = "Not Promoted"
@@ -359,61 +372,60 @@ def job_extract(driver, name):
                 if current_pages:
                     if current_page_index < len(current_pages):
                         # Click on the current page
-                        if current_page_index == 0 :
-                            page = current_pages[current_page_index]
-                            page.click()
-                            time.sleep(5)
+                        page = current_pages[current_page_index]
+                        page.click()
+                        time.sleep(5)
 
-                            # Page scrolling in order to load all elements
-                            page_scrolling_for_elements_loading(driver)
-
-                            job_elements = get_job_containers_in_page(driver)
-
-                            for job in job_elements:
-                                # Skip the "Recommended for you" section
-                                time.sleep(3)
-                                try:
-                                    job.click()
-                                    job_data = {}
-                                    job_data['details'] = get_job_elements(job)
-                                    job_data['hirer_infos'] = get_the_hiring_infos(driver)
-                                    job_data['job_insights'] = get_job_details(driver)
-                                    job_data['specific_description'] = get_specific_job_description_json(driver)
-                                    job_data['skills'] = get_job_skills_json(driver)
-                                    print(job_data)
-                                    all_jobs.append(job_data)
-
-                                except Exception as e:
-                                    print(f"Error while processing job: {e}")
-                                    continue  # Continue to the next job element even if an exception occurs
-                            current_page_index += 1
-
-                        else:
-                            print("No more pages to click.")
-                            break
-
-                    else:
+                        # Page scrolling in order to load all elements
                         page_scrolling_for_elements_loading(driver)
+
                         job_elements = get_job_containers_in_page(driver)
 
-                        if not job_elements:
-                            print("No job elements found.")
-                            break
-
                         for job in job_elements:
-                            job.click()
-                            job_data = {}
-                            job_data['details'] = get_job_elements(job)
-                            job_data['hirer_infos'] = get_the_hiring_infos(driver)
-                            job_data['job_insights'] = get_job_details(driver)
-                            job_data['specific_description'] = get_specific_job_description_json(driver)
-                            job_data['skills'] = get_job_skills_json(driver)
-                            print(job_data)
-                            all_jobs.append(job_data)
-                        print('done')
+                            # Skip the "Recommended for you" section
+                            time.sleep(3)
+                            try:
+                                job.click()
+                                job_data = {}
+                                job_data['details'] = get_job_elements(job)
+                                job_data['hirer_infos'] = get_the_hiring_infos(driver)
+                                job_data['job_insights'] = get_job_details(driver)
+                                job_data['specific_description'] = get_specific_job_description_json(driver)
+                                job_data['skills'] = get_job_skills_json(driver)
+                                print(job_data)
+                                all_jobs.append(job_data)
+
+                            except Exception as e:
+                                print(f"Error while processing job: {e}")
+                                continue  # Continue to the next job element even if an exception occurs
+                        current_page_index += 1
+
+                    else:
+                        print("No more pages to click.")
                         break
 
-                time.sleep(2)
+                else:
+                    page_scrolling_for_elements_loading(driver)
+                    job_elements = get_job_containers_in_page(driver)
+
+                    if not job_elements:
+                        print("No job elements found.")
+                        break
+
+                    for job in job_elements:
+                        job.click()
+                        job_data = {}
+                        job_data['details'] = get_job_elements(job)
+                        job_data['hirer_infos'] = get_the_hiring_infos(driver)
+                        job_data['job_insights'] = get_job_details(driver)
+                        job_data['specific_description'] = get_specific_job_description_json(driver)
+                        job_data['skills'] = get_job_skills_json(driver)
+                        print(job_data)
+                        all_jobs.append(job_data)
+                    print('done')
+                    break
+
+            time.sleep(2)
                 # Move to the next page
             print('Exited ?')
         finally:
