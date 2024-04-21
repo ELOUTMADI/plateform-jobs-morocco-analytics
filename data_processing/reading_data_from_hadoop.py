@@ -47,3 +47,15 @@ def read_json_from_hadoop_with_spark(hdfs_path):
         return {}
 
 
+
+def read_processed_data_from_hadoop_with_spark(path_to_json):
+    spark = SparkSession.builder \
+        .appName("Load JSON Data") \
+        .getOrCreate()
+
+    # Define the path to the directory containing JSON files
+
+    # Read the JSON files into a DataFrame
+    df = spark.read.json(path_to_json)
+    return df
+

@@ -26,3 +26,36 @@ def save_to_hdfs(client, job_category, data):
     except HdfsError as e:
         print(f"Failed to write data to HDFS: {e}")
 
+
+from pyspark.sql import SparkSession
+import datetime
+
+
+def save_processed_dataframe_to_hdfs(df, job_category):
+    """
+    Saves a Spark DataFrame to HDFS in a directory structured by job category and date.
+
+    Args:
+    df (DataFrame): The Spark DataFrame to save.
+    job_category (str): The category of the job to help organize the saved files.
+
+    Returns:
+    None
+    """
+    # Initialize a Spark session if not already done
+    spark = SparkSession.builder \
+        .appName("Save DataFrame to HDFS with Directories") \
+        .config("spark.hadoop.fs.defaultFS", "hdfs://localhost:9000") \
+        .getOrCreate()
+
+    # Define the base path using the current date and job category
+    date_path = datetime.datetime.now().strftime("%Y/%m/%d")
+    dir_path = f"hdfs://localhost:9000/data_lake/processed/jobs/{job_category}/{date_path}"
+
+    # Save the DataFrame to HDFS, creating the directory if it does not exist
+    df.write.mode("overwrite").json(dir_path)
+
+    # Log the location where the data was saved
+    print(f"DataFrame saved to HDFS at: {dir_path}")
+    return dir_path
+    # Stop the Spark session if it will no longer be used (optional)

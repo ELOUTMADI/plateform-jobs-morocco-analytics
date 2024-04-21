@@ -2,14 +2,13 @@
 import re
 
 # PySpark related imports
-from pyspark.sql import SparkSession
+from data_ingestion.data_lake import *
 from pyspark.sql.functions import col, to_date, explode, regexp_extract, trim, udf, lower, regexp_replace
 from pyspark.sql.types import StringType, IntegerType
 
 # Importing custom modules
 from data_processing.defining_schema import *
 from data_processing.reading_data_from_hadoop import *
-
 
 # Function Definitions
 
@@ -74,7 +73,8 @@ def clean_job_titles(df):
 
 # Main Execution Block
 if __name__ == "__main__":
-    hdfs_path = 'hdfs://localhost:9000/data_lake/raw/jobs/health_care_research_pharmacy/2024/04/08/health_care_research_pharmacy_20240408T050556.json'
+    job_category = "health_care_research_pharmacy"
+    hdfs_path = f'hdfs://localhost:9000/data_lake/raw/jobs/{job_category}/2024/04/08/health_care_research_pharmacy_20240408T050556.json'
     df = read_json_from_hadoop_with_spark(hdfs_path)
 
     # Process JSON data through various stages
@@ -86,10 +86,11 @@ if __name__ == "__main__":
 
     # Clean and transform the DataFrame
     df = fill_missing_values_hiring(df)
-    #df = fill_missing_values_remote_status(df)
     df = standardize_column_names(df)
     df = clean_string_columns(df)
     df = add_experience_column(df)
     df = clean_job_titles(df)
     # Display the DataFrame
-    df.show()
+    path = save_processed_dataframe_to_hdfs(df, job_category)
+    dg = read_processed_data_from_hadoop_with_spark(path)
+    dg.show()
