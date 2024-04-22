@@ -3,7 +3,7 @@ import re
 
 # PySpark related imports
 from data_ingestion.data_lake import *
-from pyspark.sql.functions import col, to_date, explode, regexp_extract, trim, udf, lower, regexp_replace
+from pyspark.sql.functions import col, to_date, explode, regexp_extract, trim, udf, lower, regexp_replace , when
 from pyspark.sql.types import StringType, IntegerType
 
 # Importing custom modules
@@ -71,6 +71,38 @@ def clean_job_titles(df):
 
     return df
 
+def process_job_stats(df):
+    """
+    Processes the 'stats' column of a job DataFrame to extract structured information.
+    Adds columns for company, location, repost status, time posted without 'Reposted', and applicants.
+    Removes the original 'stats' column.
+
+    Parameters:
+        df (DataFrame): Input DataFrame containing a column 'stats'.
+
+    Returns:
+        DataFrame: Transformed DataFrame with new columns and without the 'stats' column.
+    """
+    # Define the regular expression patterns
+    company_pattern = r"^(.*?) ·"
+    location_pattern = r"· (.*?) ·"
+    repost_time_pattern = r"Reposted (\d+ \w+ ago) ·"  # Extracts just the time portion after "Reposted"
+    time_posted_pattern = r"· (\d+ \w+ ago) ·"
+    applicants_pattern = r"· (\d+ applicants|Over 100 applicants)$"
+
+    # Transform the DataFrame
+    transformed_df = df.withColumn("company", regexp_extract("stats", company_pattern, 1)) \
+                       .withColumn("location", regexp_extract("stats", location_pattern, 1)) \
+                       .withColumn("is_reposted", when(regexp_extract("stats", repost_time_pattern, 1) != "", "Yes").otherwise("No")) \
+                       .withColumn("time_posted", when(regexp_extract("stats", repost_time_pattern, 1) != "", regexp_extract("stats", repost_time_pattern, 1)) \
+                                    .otherwise(regexp_extract("stats", time_posted_pattern, 1))) \
+                       .withColumn("applicants", regexp_extract("stats", applicants_pattern, 1))
+
+    # Drop the original 'stats' column
+    transformed_df = transformed_df.drop("stats")
+
+    return transformed_df
+
 # Main Execution Block
 if __name__ == "__main__":
     job_category = "health_care_research_pharmacy"
@@ -90,7 +122,8 @@ if __name__ == "__main__":
     df = clean_string_columns(df)
     df = add_experience_column(df)
     df = clean_job_titles(df)
+    df = process_job_stats(df)
     # Display the DataFrame
     path = save_processed_dataframe_to_hdfs(df, job_category)
-    dg = read_processed_data_from_hadoop_with_spark(path)
-    dg.show()
+    #dg = read_processed_data_from_hadoop_with_spark(path)
+    df.show(truncate=False)
