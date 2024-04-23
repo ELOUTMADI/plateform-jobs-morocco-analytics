@@ -103,7 +103,113 @@ def process_job_stats(df):
 
     return transformed_df
 
+
+
+def extract_city(location: str) -> str:
+    """
+    Extracts the primary city name from a location string.
+    The function uses a regex that captures multiple words in the city name,
+    continuing until it encounters a comma, dash, or ends the input.
+
+    Args:
+    location (str): The full location string from which to extract the city.
+
+    Returns:
+    str: The extracted city name or None if not applicable.
+    """
+    if location is None:
+        return None
+
+    # Convert to lower case to standardize the input
+    location = location.lower()
+
+    # Define special handling for certain phrases
+    if 'metropolitan area' in location and 'casablanca' in location:
+        return 'Casablanca'
+
+    # Define a regular expression pattern to extract the city name
+    # This pattern aims to capture city names more precisely before common descriptors.
+    pattern = re.compile(r"([\w\s]+?)(?:,|-| metropolitan area|$)")
+    # Attempt to match the pattern
+    match = pattern.match(location)
+    if match:
+        # Return the matched group, stripped of trailing spaces and capitalized
+        city = match.group(1).strip()
+        return ' '.join([word.capitalize() for word in city.split()])
+
+    # Default to None if no match is found
+    return None
+def process_location_column(df):
+    """
+    Processes the location column of a DataFrame to extract city names,
+    using a generalized pattern to handle a variety of location formats.
+
+    Args:
+    df (DataFrame): DataFrame with a column named 'location' containing location strings.
+
+    Returns:
+    DataFrame: A new DataFrame with an added column 'city' containing the extracted city names.
+    """
+    # Register the UDF
+    extract_city_udf = udf(extract_city, StringType())
+
+    # Apply the UDF to the location column
+    df_with_city = df.withColumn("city", extract_city_udf(df["location"]))
+    df_with_city = df_with_city.drop("location")
+
+    return df_with_city
+
+
+
+def extract_skills(skill_string):
+    """
+    Cleans the skills data in the 'Required_Skills' column by converting the string
+    representation of a list into an actual list and removing unnecessary conjunctions.
+
+    Args:
+    skill_string (str): A string that represents a list of skills, including some conjunctions like 'and'.
+
+    Returns:
+    list: A clean list of skills without the conjunction 'and'.
+    """
+    try:
+        # Convert the string to a list using json.loads after replacing single quotes
+        skills = json.loads(skill_string.replace("'", '"'))
+        # Remove 'and' which is not required and strip any surrounding whitespace
+        clean_skills = [skill.replace("and","").strip() for skill in skills if skill.lower() != 'and']
+        return clean_skills
+    except json.JSONDecodeError:
+        return []
+
+def process_skills_column(df):
+    """
+    Processes the 'Required_Skills' column of a DataFrame to extract and clean the skills data.
+
+    Args:
+    df (DataFrame): DataFrame with a column named 'Required_Skills' containing strings of list data.
+
+    Returns:
+    DataFrame: A new DataFrame with an updated 'Required_Skills' column containing cleaned lists of skills.
+    """
+    # Register the UDF
+    extract_skills_udf = udf(extract_skills, ArrayType(StringType()))
+
+    # Apply the UDF to the 'Required_Skills' column
+    df_with_clean_skills = df.withColumn("list_of_skills", extract_skills_udf(col("Required_Skills")))
+    df_with_clean_skills = df_with_clean_skills.drop("Required_Skills")
+
+    return df_with_clean_skills
 # Main Execution Block
+
+
+
+###########################################     SAVING TO DB     ######################################################
+
+from data_processing.save_to_db import *
+
+
+
+
 if __name__ == "__main__":
     job_category = "health_care_research_pharmacy"
     hdfs_path = f'hdfs://localhost:9000/data_lake/raw/jobs/{job_category}/2024/04/08/health_care_research_pharmacy_20240408T050556.json'
@@ -124,6 +230,24 @@ if __name__ == "__main__":
     df = clean_job_titles(df)
     df = process_job_stats(df)
     # Display the DataFrame
-    path = save_processed_dataframe_to_hdfs(df, job_category)
+    #path = save_processed_dataframe_to_hdfs(df, job_category)
     #dg = read_processed_data_from_hadoop_with_spark(path)
-    df.show(truncate=False)
+
+    df = process_location_column(df)
+    df = process_skills_column(df)
+    df = df.drop("Other")
+    # Filter out rows where company_size is not null and drop duplicates based on company_name
+    df_filtered = df.filter(df.company_size.isNotNull()).dropDuplicates(["company_name"])
+    df_filtered.show(truncate=False)
+    # Convert DataFrame to RDD
+    rdd = df_filtered.rdd
+
+    # Apply the function to each partition
+    processed_rdd = rdd.mapPartitionsWithIndex(insert_companies)
+
+    # Collect the results to trigger computation
+    results = processed_rdd.collect()
+
+    # Print results
+    for result in results:
+        print(result)
