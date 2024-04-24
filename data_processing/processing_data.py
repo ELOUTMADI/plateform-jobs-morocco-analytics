@@ -238,7 +238,7 @@ if __name__ == "__main__":
     df = df.drop("Other")
     # Filter out rows where company_size is not null and drop duplicates based on company_name
     df_filtered_companies = df.filter(df.company_size.isNotNull()).dropDuplicates(["company_name"])
-    df_filtered_sector = df.dropDuplicates(["sector"])
+    df_filtered_sector = df.dropDuplicates(["sector"]).dropna()
     rdd = df.rdd
     # Apply the function to each partition
     companies_rdd = df_filtered_companies.rdd.mapPartitionsWithIndex(insert_companies)

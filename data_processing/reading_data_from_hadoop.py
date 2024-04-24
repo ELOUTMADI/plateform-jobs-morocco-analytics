@@ -49,8 +49,15 @@ def read_json_from_hadoop_with_spark(hdfs_path):
 
 
 def read_processed_data_from_hadoop_with_spark(path_to_json):
+
     spark = SparkSession.builder \
-        .appName("Load JSON Data") \
+        .appName("Load Json Data") \
+        .config("spark.executor.memory", "3g") \
+        .config("spark.driver.memory", "3g") \
+        .config("spark.executor.instances", "3") \
+        .config("spark.executor.heartbeatInterval", "120s") \
+        .config("spark.network.timeout", "10000001") \
+        .config("spark.executor.heartbeatInterval", "10000000") \
         .getOrCreate()
 
     # Define the path to the directory containing JSON files

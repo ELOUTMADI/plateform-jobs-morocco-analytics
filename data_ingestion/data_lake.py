@@ -43,10 +43,10 @@ def save_processed_dataframe_to_hdfs(df, job_category):
     None
     """
     # Initialize a Spark session if not already done
-    spark = SparkSession.builder \
-        .appName("Save DataFrame to HDFS with Directories") \
-        .config("spark.hadoop.fs.defaultFS", "hdfs://localhost:9000") \
-        .getOrCreate()
+    #spark = SparkSession.builder \
+    #   .appName("Save DataFrame to HDFS with Directories") \
+     #   .config("spark.hadoop.fs.defaultFS", "hdfs://localhost:9000") \
+    #    .getOrCreate()
 
     # Define the base path using the current date and job category
     date_path = datetime.datetime.now().strftime("%Y/%m/%d")
