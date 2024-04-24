@@ -57,7 +57,6 @@ class JobCondition(Base):
 class JobListing(Base):
     __tablename__ = 'job_listings'
     JobID = Column(BigInteger, primary_key=True)
-    jobIDLinkedin = Column(BigInteger)
     companyID = Column(Integer, ForeignKey('companies.companyID'))
     locationID = Column(Integer, ForeignKey('locations.locationID'))
     hirerID = Column(Integer, ForeignKey('hirers.hirerID'))
@@ -65,6 +64,7 @@ class JobListing(Base):
     sectorID = Column(Integer, ForeignKey('sectors.sectorID'))
     expertiseID = Column(Integer, ForeignKey('expertise.expertiseID'))
     descriptionID = Column(Integer, ForeignKey('job_descriptions.descriptionID'))
+    jobIDLinkedin = Column(BigInteger)
     applicants = Column(Integer)
     years_experience = Column(Integer)
 
@@ -73,10 +73,5 @@ Base.metadata.create_all(engine)
 
 Base = declarative_base()
 
-class jobDescription(Base):
-    __tablename__ = "jobdescrition"
-    id = Column(Integer , primary_key = True)
-    descritpin = Column(Text)
-    list_of_skills = Column(ARRAY(String))
 
 

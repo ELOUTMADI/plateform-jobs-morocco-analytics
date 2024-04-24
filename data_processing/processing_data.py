@@ -237,17 +237,26 @@ if __name__ == "__main__":
     df = process_skills_column(df)
     df = df.drop("Other")
     # Filter out rows where company_size is not null and drop duplicates based on company_name
-    df_filtered = df.filter(df.company_size.isNotNull()).dropDuplicates(["company_name"])
-    df_filtered.show(truncate=False)
-    # Convert DataFrame to RDD
-    rdd = df_filtered.rdd
-
+    df_filtered_companies = df.filter(df.company_size.isNotNull()).dropDuplicates(["company_name"])
+    df_filtered_sector = df.dropDuplicates(["sector"])
+    rdd = df.rdd
     # Apply the function to each partition
-    processed_rdd = rdd.mapPartitionsWithIndex(insert_companies)
+    companies_rdd = df_filtered_companies.rdd.mapPartitionsWithIndex(insert_companies)
+    location_rdd = rdd.mapPartitionsWithIndex(insert_location)
+    hirers_rdd = rdd.mapPartitionsWithIndex(insert_hirers)
+    job_type_rdd = rdd.mapPartitionsWithIndex(insert_job_type)
+    section_rdd = df_filtered_sector.rdd.mapPartitionsWithIndex(insert_section)
+    expertise_rdd = rdd.mapPartitionsWithIndex(insert_expertise)
+    job_description_rdd = rdd.mapPartitionsWithIndex(insert_job_description)
+    job_condition_rdd = rdd.mapPartitionsWithIndex(insert_job_condition)
+    job_listing_rdd = rdd.mapPartitionsWithIndex(insert_job_listing)
 
-    # Collect the results to trigger computation
-    results = processed_rdd.collect()
-
-    # Print results
-    for result in results:
-        print(result)
+    results = companies_rdd.collect()
+    results2 = location_rdd.collect()
+    results3 = hirers_rdd.collect()
+    results4 = job_type_rdd.collect()
+    results5 = section_rdd.collect()
+    results6 = expertise_rdd.collect()
+    results7  = job_description_rdd.collect()
+    results8 = job_condition_rdd.collect()
+    results9 = job_listing_rdd.collect()
