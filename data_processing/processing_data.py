@@ -245,7 +245,7 @@ if __name__ == "__main__":
     location_rdd = rdd.mapPartitionsWithIndex(insert_location)
     hirers_rdd = rdd.mapPartitionsWithIndex(insert_hirers)
     job_type_rdd = rdd.mapPartitionsWithIndex(insert_job_type)
-    section_rdd = df_filtered_sector.rdd.mapPartitionsWithIndex(insert_section)
+    section_rdd = df_filtered_sector.rdd.mapPartitionsWithIndex(insert_sector)
     expertise_rdd = rdd.mapPartitionsWithIndex(insert_expertise)
     job_description_rdd = rdd.mapPartitionsWithIndex(insert_job_description)
     job_condition_rdd = rdd.mapPartitionsWithIndex(insert_job_condition)

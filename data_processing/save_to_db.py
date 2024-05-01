@@ -10,99 +10,110 @@ def insert_companies(index, iterator):
     session = get_session()
     try:
         for record in iterator:
-            # Assuming you have some logic to map your record to the Company model
-            company = Company(company_name=record['company_name'], company_size=record['company_size'])
-            session.add(company)
+            if not session.query(Company).filter_by(company_name=record['company_name']).first():
+                company = Company(company_name=record['company_name'], company_size=record['company_size'])
+                session.add(company)
         session.commit()
     except Exception as e:
         session.rollback()
-        print(f"Failed to insert company DIMENSION due to: {e}")
+        print(f"Failed to insert company due to: {e}")
     finally:
         session.close()
     return iter(["Batch completed of Company Records"])
 
-def insert_location(index,iterator):
+
+def insert_location(index, iterator):
     session = get_session()
     try:
         for record in iterator:
-            location = Location(city=record['city'],remote_status=record['remote_status'])
-            session.add(location)
+            if not session.query(Location).filter_by(city=record['city'], remote_status=record['remote_status']).first():
+                location = Location(city=record['city'], remote_status=record['remote_status'])
+                session.add(location)
         session.commit()
-    except Exception as e :
+    except Exception as e:
         session.rollback()
-        print(f"Failed to insert to Location DIMENSION due to :{e}")
+        print(f"Failed to insert to Location due to: {e}")
     finally:
         session.close()
     return iter(["Batch Completed of Location Records"])
 
 
-def insert_hirers(index,iterator):
+
+def insert_hirers(index, iterator):
     session = get_session()
-    try :
+    try:
         for record in iterator:
-            hirer = Hirer(hiring_team_name=record['hiring_team_name'],hirer_job_title=record['hirer_job_title'])
-            session.add(hirer)
+            if not session.query(Hirer).filter_by(hiring_team_name=record['hiring_team_name'], hirer_job_title=record['hirer_job_title']).first():
+                hirer = Hirer(hiring_team_name=record['hiring_team_name'], hirer_job_title=record['hirer_job_title'])
+                session.add(hirer)
         session.commit()
-    except Exception as e :
+    except Exception as e:
         session.rollback()
-        print(f"Failed to Insert to Hirers DIMENSION due to : {e}")
+        print(f"Failed to insert to Hirers due to: {e}")
     finally:
         session.close()
     return iter(["Batch Completed of Hirers Records"])
 
-def insert_job_type(index , iterator):
-    session = get_session()
-    try :
-        for record in iterator:
-            job_type = JobType(job_type=record["job_type"])
-            session.add(job_type)
-        session.commit()
-    except Exception as e :
-        session.rollback()
-        print(f"Failed to insert to Job TYpe DIMENSION")
-    finally:
-        session.close()
-    return iter(["Batch Completed of job type Records"])
 
-
-def insert_section(index , iterator):
+def insert_job_type(index, iterator):
     session = get_session()
     try:
-        for record in iterator :
-            sector = Sector(sector=record["sector"])
-            session.add(sector)
+        for record in iterator:
+            if not session.query(JobType).filter_by(job_type=record['job_type']).first():
+                job_type = JobType(job_type=record['job_type'])
+                session.add(job_type)
         session.commit()
-    except Exception as e :
+    except Exception as e:
         session.rollback()
-        print(f"Failed to insert to section DIMENSION")
+        print(f"Failed to insert to Job Type due to: {e}")
+    finally:
+        session.close()
+    return iter(["Batch Completed of Job Type Records"])
+
+
+
+def insert_sector(index, iterator):
+    session = get_session()
+    try:
+        for record in iterator:
+            if not session.query(Sector).filter_by(sector=record['sector']).first():
+                sector = Sector(sector=record['sector'])
+                session.add(sector)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        print(f"Failed to insert to Sector due to: {e}")
     finally:
         session.close()
     return iter(["Batch Completed of Sector Records"])
 
-def insert_expertise(index,iterator):
-        session = get_session()
-        try:
-            for record in iterator:
-                expertise = Expertise(expertise=record["expertise"])
-                session.add(expertise)
-            session.commit()
-        except Exception as e :
-            session.rollback()
-            print(f"Failed to insert to expertise DIMENSION")
-        finally:
-            session.close()
-        return iter(["Batch Completed of expertise Records"])
-
-def insert_job_description(index,iterator):
+def insert_expertise(index, iterator):
     session = get_session()
     try:
         for record in iterator:
-            job_description = JobDescription(job_description=record["job_description"] , list_of_skills=record["list_of_skills"])
-            session.add(job_description)
+            if not session.query(Expertise).filter_by(expertise=record['expertise']).first():
+                expertise = Expertise(expertise=record['expertise'])
+                session.add(expertise)
         session.commit()
-    except Exception as e :
+    except Exception as e:
         session.rollback()
-        print(f"Failed to insert to Job Description DIMENSION")
+        print(f"Failed to insert to Expertise due to: {e}")
+    finally:
+        session.close()
+    return iter(["Batch Completed of Expertise Records"])
+
+
+def insert_job_description(index, iterator):
+    session = get_session()
+    try:
+        for record in iterator:
+            if not session.query(JobDescription).filter_by(job_description=record['job_description']).first():
+                job_description = JobDescription(job_description=record['job_description'], list_of_skills=record['list_of_skills'])
+                session.add(job_description)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        print(f"Failed to insert to Job Description due to: {e}")
     finally:
         session.close()
     return iter(["Batch Completed of Job Description Records"])
@@ -112,28 +123,35 @@ def insert_job_condition(index, iterator):
     session = get_session()
     try:
         for record in iterator:
-            # Ensure data types and formats match what's expected by the database schema
-            promoted_status = str(record["promoted_status"])
-            easy_apply_status = str(record["easy_apply_status"])
-            is_reposted = bool(record["is_reposted"])  # Convert to boolean if it's not already
-            time_posted = str(record["time_posted"])
-            scrapping_date = record["scrapping_date"]  # Ensure this is a date object or correctly formatted string
+            # Convert 'Yes'/'No' to True/False for the boolean field
+            is_reposted_bool = True if record["is_reposted"] == 'Yes' else False
 
-            job_condition = JobCondition(
-                promoted_status=promoted_status,
-                easy_apply_status=easy_apply_status,
-                is_reposted=is_reposted,
-                time_posted=time_posted,
-                scrapping_date=scrapping_date
-            )
-            session.add(job_condition)
+            # Check for existing job condition before inserting
+            existing_condition = session.query(JobCondition).filter_by(
+                time_posted=record['time_posted'],
+                promoted_status=record['promoted_status'],
+                easy_apply_status=record['easy_apply_status'],
+                is_reposted=is_reposted_bool,
+                scrapping_date=record['scrapping_date']
+            ).first()
+
+            if not existing_condition:
+                job_condition = JobCondition(
+                    promoted_status=record['promoted_status'],
+                    easy_apply_status=record['easy_apply_status'],
+                    is_reposted=is_reposted_bool,
+                    time_posted=record['time_posted'],
+                    scrapping_date=record['scrapping_date']
+                )
+                session.add(job_condition)
         session.commit()
     except Exception as e:
         session.rollback()
-        print(f"Failed to insert to Job Condition DIMENSION due to: {e}")  # Print the specific error
+        print(f"Failed to insert to Job Condition due to: {e}")
     finally:
         session.close()
     return iter(["Batch Completed of Job Condition Records"])
+
 
 
 import re
