@@ -72,7 +72,7 @@ def insert_job_type(index, iterator):
 
 
 
-def insert_sector(index, iterator):
+def insert_sectors(index, iterator):
     session = get_session()
     try:
         for record in iterator:
@@ -135,15 +135,14 @@ def insert_job_condition(index, iterator):
                 scrapping_date=record['scrapping_date']
             ).first()
 
-            if not existing_condition:
-                job_condition = JobCondition(
+            job_condition = JobCondition(
                     promoted_status=record['promoted_status'],
                     easy_apply_status=record['easy_apply_status'],
                     is_reposted=is_reposted_bool,
                     time_posted=record['time_posted'],
                     scrapping_date=record['scrapping_date']
                 )
-                session.add(job_condition)
+            session.add(job_condition)
         session.commit()
     except Exception as e:
         session.rollback()

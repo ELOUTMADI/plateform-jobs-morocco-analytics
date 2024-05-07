@@ -1,10 +1,8 @@
-# Standard library imports
-import re
 
 # PySpark related imports
-from data_ingestion.data_lake import *
-from pyspark.sql.functions import col, to_date, explode, regexp_extract, trim, udf, lower, regexp_replace , when
-from pyspark.sql.types import StringType, IntegerType
+
+from pyspark.sql.functions import  to_date,  regexp_extract, trim, udf, lower, regexp_replace , when
+from pyspark.sql.types import  IntegerType
 
 # Importing custom modules
 from data_processing.defining_schema import *
@@ -199,20 +197,11 @@ def process_skills_column(df):
     df_with_clean_skills = df_with_clean_skills.drop("Required_Skills")
 
     return df_with_clean_skills
-# Main Execution Block
-
-
-
-###########################################     SAVING TO DB     ######################################################
-
-from data_processing.save_to_db import *
 
 
 
 
-if __name__ == "__main__":
-    job_category = "health_care_research_pharmacy"
-    hdfs_path = f'hdfs://localhost:9000/data_lake/raw/jobs/{job_category}/2024/04/08/health_care_research_pharmacy_20240408T050556.json'
+def process_initial_data(hdfs_path):
     df = read_json_from_hadoop_with_spark(hdfs_path)
 
     # Process JSON data through various stages
@@ -221,42 +210,51 @@ if __name__ == "__main__":
     job_insight = parse_json_and_process_job_insights(hirer, "job_insights")
     skills = parse_json_and_process_skills(job_insight, "skills")
     df = parse_json_and_process_description(skills, "specific_description")
-
-    # Clean and transform the DataFrame
     df = fill_missing_values_hiring(df)
     df = standardize_column_names(df)
     df = clean_string_columns(df)
+    return df
+
+
+def enhance_data_with_experience_and_titles(df):
+    """Enhances data with experience and cleaned job titles."""
     df = add_experience_column(df)
     df = clean_job_titles(df)
-    df = process_job_stats(df)
-    # Display the DataFrame
-    #path = save_processed_dataframe_to_hdfs(df, job_category)
-    #dg = read_processed_data_from_hadoop_with_spark(path)
+    return df
 
+def perform_advanced_data_processing(df):
+    """Performs advanced data processing like extracting job stats and locations."""
+    df = process_job_stats(df)
     df = process_location_column(df)
     df = process_skills_column(df)
     df = df.drop("Other")
-    # Filter out rows where company_size is not null and drop duplicates based on company_name
-    df_filtered_companies = df.filter(df.company_size.isNotNull()).dropDuplicates(["company_name"])
-    df_filtered_sector = df.dropDuplicates(["sector"]).dropna()
-    rdd = df.rdd
-    # Apply the function to each partition
-    companies_rdd = df_filtered_companies.rdd.mapPartitionsWithIndex(insert_companies)
-    location_rdd = rdd.mapPartitionsWithIndex(insert_location)
-    hirers_rdd = rdd.mapPartitionsWithIndex(insert_hirers)
-    job_type_rdd = rdd.mapPartitionsWithIndex(insert_job_type)
-    section_rdd = df_filtered_sector.rdd.mapPartitionsWithIndex(insert_sector)
-    expertise_rdd = rdd.mapPartitionsWithIndex(insert_expertise)
-    job_description_rdd = rdd.mapPartitionsWithIndex(insert_job_description)
-    job_condition_rdd = rdd.mapPartitionsWithIndex(insert_job_condition)
-    job_listing_rdd = rdd.mapPartitionsWithIndex(insert_job_listing)
 
-    results = companies_rdd.collect()
-    results2 = location_rdd.collect()
-    results3 = hirers_rdd.collect()
-    results4 = job_type_rdd.collect()
-    results5 = section_rdd.collect()
-    results6 = expertise_rdd.collect()
-    results7  = job_description_rdd.collect()
-    results8 = job_condition_rdd.collect()
-    results9 = job_listing_rdd.collect()
+    return df
+
+def filter_and_prepare_data_for_db(df):
+
+    filters = {
+        "companies" : (df.company_size.isNotNull(),["companies"]),
+        "job_type" : (col("job_type") != "",["job_type"]),
+        "sectors" : (col("sector") != "" , ["hiring_team_name"]),
+        "hirers" : (col("hiring_team_name") != "" , ["hiring_team_name","hirer_job_title"]),
+        "location" : ((col("remote_status") != "") & (col("city") != ""),["city","remote_status"]),
+        "job_conditions" : ((col("promoted_status").isNotNull()) & (col("easy_apply_status").isNotNull()) &
+            (col("is_reposted").isNotNull()) & (col("time_posted").isNotNull()) & (col("scrapping_date").isNotNull()), ["promoted_status","easy_apply_status","is_reposted","time_posted","scrapping_date"])
+    }
+
+    return {key: df.select(value[1]).dropDuplicates(value[1]).filter(value[0]) for key , value in filters.items()}
+
+
+
+#########################     SAVING TO DB     ######################################################
+from data_processing.save_to_db import *
+
+if __name__ == "__main__":
+    job_category = "health_care_research_pharmacy"
+    hdfs_path = f'hdfs://localhost:9000/data_lake/raw/jobs/{job_category}/2024/04/08/health_care_research_pharmacy_20240408T050556.json'
+    df = process_initial_data(hdfs_path)
+    df = enhance_data_with_experience_and_titles(df)
+    df = perform_advanced_data_processing(df)
+
+    print(df.columns)
