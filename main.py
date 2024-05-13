@@ -239,23 +239,41 @@ def perform_advanced_data_processing(df):
     return df
 
 
+from pyspark.sql.functions import col
+
 def filter_and_prepare_data_for_db(df):
+    """
+    Optimized version of data filtering and preparation for database insertion.
+    Applies transformations in a chained manner to minimize computational overhead.
+    """
     filters = {
         "companies": (df.company_size.isNotNull(), ["company_name", "company_size"]),
         "job_type": (col("job_type") != "", ["job_type"]),
         "sectors": (col("sector") != "", ["sector"]),
         "hirers": (col("hiring_team_name") != "", ["hiring_team_name", "hirer_job_title"]),
         "location": ((col("remote_status") != "") & (col("city") != ""), ["city", "remote_status"]),
-        "job_condition": ((col("promoted_status").isNotNull()) & (col("easy_apply_status").isNotNull()) &
-                          (col("is_reposted").isNotNull()) & (col("time_posted").isNotNull()) & (
-                              col("scrapping_date").isNotNull()),
-                          ["promoted_status", "easy_apply_status", "is_reposted", "time_posted", "scrapping_date"]),
+        "job_condition": (
+            (col("promoted_status").isNotNull()) & (col("easy_apply_status").isNotNull()) &
+            (col("is_reposted").isNotNull()) & (col("time_posted").isNotNull()) &
+            (col("scrapping_date").isNotNull()), ["promoted_status", "easy_apply_status", "is_reposted", "time_posted", "scrapping_date"]
+        ),
         "expertise": (col("expertise") != "", ["expertise"]),
-        "job_description": (None, ["job_description", "list_of_skills"])
-
+        "job_description": (None, ["job_description", "list_of_skills"]),
+        "job_listing": (None, df.columns)
     }
 
-    return {key: df.select(value[1]).dropDuplicates(value[1]).filter(value[0]) for key, value in filters.items()}
+    result = {}
+    for key, (condition, columns) in filters.items():
+        if condition is not None:
+            # Chain filter, dropDuplicates, and select operations together
+            temp_df = df.filter(condition).dropDuplicates(columns).select(columns)
+        else:
+            # For cases with no condition, directly drop duplicates and select
+            temp_df = df.dropDuplicates(columns).select(columns)
+
+        result[key] = temp_df
+
+    return result
 
 
 def insert_data_into_db(filtered_data):
