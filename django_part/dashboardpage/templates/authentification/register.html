@@ -10,7 +10,9 @@
                         <h4>Register</h4>
                     </div>
                     <div class="card-body">
-                        <form action="/submit-your-registration-form" method="post">
+                        <form action="{% url 'register_post' %}" method="post">
+                            {% csrf_token %}
+                            {% include 'partials/_messages.html' %}
                             <div class="form-group">
                                 <label for="username">Username</label>
                                 <input type="text" class="form-control" id="username" name="username" required>

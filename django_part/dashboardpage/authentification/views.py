@@ -5,11 +5,18 @@ from django.shortcuts import render
 from django.views import View
 from django.contrib.auth.models import User
 from validate_email import validate_email
-
+from django.contrib import messages
 # Create your views here.
 def register(request):
     return render(request, 'authentification/register.html')
 
+def register_post(request):
+    messages.success(request,'yes nigga')
+    messages.warning(request,'yes nigga')
+    messages.info(request,'yes nigga')
+    messages.error(request,'yes nigga')
+
+    return render(request, 'authentification/register.html')
 
 class UsernameValidationView(View):
     def post(self, request):

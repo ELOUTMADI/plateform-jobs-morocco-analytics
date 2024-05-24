@@ -8,6 +8,7 @@ urlpatterns = [
 
     path('register', views.register, name='register'),
     path('validate-username', csrf_exempt(UsernameValidationView.as_view()), name='validate-username'),
-    path('validate-email', csrf_exempt(EmailValidationView.as_view()) , name='validate-email')
+    path('validate-email', csrf_exempt(EmailValidationView.as_view()) , name='validate-email'),
+    path('register_post',views.register_post ,name='register_post')
 ]
 
