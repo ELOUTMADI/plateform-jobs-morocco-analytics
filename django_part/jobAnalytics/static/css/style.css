@@ -1,0 +1,56 @@
+/* Custom styles for the sidebar and page content */
+#wrapper {
+    display: flex;
+    align-items: stretch;
+    min-height: 100vh;
+}
+
+#sidebar-wrapper {
+    width: 250px;
+    background-color: #343a40;
+    color: white;
+}
+
+#page-content-wrapper {
+    flex: 1;
+    padding: 20px;
+}
+
+#wrapper.toggled #sidebar-wrapper {
+    margin-left: -250px;
+}
+
+.sidebar-heading {
+    padding: 1rem 1.25rem;
+    font-size: 1.2rem;
+}
+
+.list-group-item {
+    background-color: #343a40;
+    color: white;
+}
+
+.list-group-item:hover {
+    background-color: #495057;
+    color: white;
+}
+
+.navbar {
+    padding-left: 0;
+}
+
+.navbar-nav .nav-link {
+    color: #000;
+}
+
+.navbar-nav .nav-link:hover {
+    color: #007bff;
+}
+
+.form-inline .form-control {
+    width: auto;
+}
+
+body {
+    overflow-x: hidden;
+}

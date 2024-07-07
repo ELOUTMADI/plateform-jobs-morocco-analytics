@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+
+{% block title %}Job Analytics Dashboard{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
+<div class="container-fluid">
+    <h1 class="mt-4">Dashboard</h1>
+    <div class="row mb-4">
+        <div class="col-12">
+            <form id="filterForm" method="get" action="{% url 'dashboard' %}" class="form-inline">
+                <div class="form-group mr-2">
+                    <label for="date_range" class="sr-only">Select Date Range:</label>
+                    <input type="text" id="date_range" name="date_range" class="form-control form-control-sm" placeholder="All Time" />
+                </div>
+                <div class="form-group mr-2">
+                    <label for="company" class="sr-only">Select Company:</label>
+                    <select id="company" name="company" class="form-control form-control-sm">
+                        <option value="">All Companies</option>
+                        {% for company in companies %}
+                        <option value="{{ company.company_name }}">{{ company.company_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group mr-2">
+                    <label for="job_type" class="sr-only">Select Job Type:</label>
+                    <select id="job_type" name="job_type" class="form-control form-control-sm">
+                        <option value="">All Job Types</option>
+                        {% for job_type in job_types %}
+                        <option value="{{ job_type.job_type }}">{{ job_type.job_type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group mr-2">
+                    <label for="location" class="sr-only">Select Location:</label>
+                    <select id="location" name="location" class="form-control form-control-sm">
+                        <option value="">All Locations</option>
+                        {% for location in locations %}
+                        <option value="{{ location.city }}">{{ location.city }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+            </form>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-6">
+            <h3>Job Listings by Company</h3>
+            <canvas id="jobCountByCompanyChart"></canvas>
+        </div>
+        <div class="col-lg-6">
+            <h3>Job Listings by Location</h3>
+            <canvas id="jobCountByLocationChart"></canvas>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-6">
+            <h3>Job Listings by Sector</h3>
+            <canvas id="jobCountBySectorChart"></canvas>
+        </div>
+        <div class="col-lg-6">
+            <h3>Job Listings by Job Type</h3>
+            <canvas id="jobCountByJobTypeChart"></canvas>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-6">
+            <h3>Applicants per Job Listing</h3>
+            <canvas id="jobListingsWithApplicantsChart"></canvas>
+        </div>
+        <div class="col-lg-6">
+            <h3>Job Listings by Promotion Status</h3>
+            <canvas id="promotionEffectivenessChart"></canvas>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-6">
+            <h3>Remote vs On-site Job Listings</h3>
+            <canvas id="remoteVsOnsiteChart"></canvas>
+        </div>
+        <div class="col-lg-6">
+            <h3>Job Listings Over Time</h3>
+            <canvas id="jobListingsOverTimeChart"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+
+{% block scripts %}
+<script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#date_range').daterangepicker({
+            autoUpdateInput: false,
+            locale: {
+                cancelLabel: 'Clear'
+            }
+        });
+
+        $('#date_range').on('apply.daterangepicker', function(ev, picker) {
+            $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
+        });
+
+        $('#date_range').on('cancel.daterangepicker', function(ev, picker) {
+            $(this).val('');
+        });
+
+        // Helper function to create a chart
+        function createChart(ctx, type, labels, data, label, backgroundColor, borderColor) {
+            new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        backgroundColor: backgroundColor,
+                        borderColor: borderColor,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    
+        // Data for charts
+        const jobCountByCompanyData = {{ job_count_by_company_data|safe }};
+        const jobCountByLocationData = {{ job_count_by_location_data|safe }};
+        const jobCountBySectorData = {{ job_count_by_sector_data|safe }};
+        const jobCountByJobTypeData = {{ job_count_by_job_type_data|safe }};
+        const jobListingsWithApplicantsData = {{ job_listings_with_applicants_data|safe }};
+        const promotionEffectivenessData = {{ promotion_effectiveness_data|safe }};
+        const remoteVsOnsiteData = {{ remote_vs_onsite_data|safe }};
+        const jobListingsOverTimeData = {{ job_listings_over_time_data|safe }};
+    
+        // Job Listings by Company Chart
+        createChart(
+            document.getElementById('jobCountByCompanyChart').getContext('2d'),
+            'bar',
+            jobCountByCompanyData.map(item => item.company_name),
+            jobCountByCompanyData.map(item => item.job_count),
+            'Number of Job Listings',
+            'rgba(75, 192, 192, 0.2)',
+            'rgba(75, 192, 192, 1)'
+        );
+    
+        // Job Listings by Location Chart
+        createChart(
+            document.getElementById('jobCountByLocationChart').getContext('2d'),
+            'bar',
+            jobCountByLocationData.map(item => item.city),
+            jobCountByLocationData.map(item => item.job_count),
+            'Number of Job Listings',
+            'rgba(54, 162, 235, 0.2)',
+            'rgba(54, 162, 235, 1)'
+        );
+    
+        // Job Listings by Sector Chart
+        createChart(
+            document.getElementById('jobCountBySectorChart').getContext('2d'),
+            'bar',
+            jobCountBySectorData.map(item => item.sector),
+            jobCountBySectorData.map(item => item.job_count),
+            'Number of Job Listings',
+            'rgba(255, 206, 86, 0.2)',
+            'rgba(255, 206, 86, 1)'
+        );
+    
+        // Job Listings by Job Type Chart
+        createChart(
+            document.getElementById('jobCountByJobTypeChart').getContext('2d'),
+            'bar',
+            jobCountByJobTypeData.map(item => item.job_type),
+            jobCountByJobTypeData.map(item => item.job_count),
+            'Number of Job Listings',
+            'rgba(153, 102, 255, 0.2)',
+            'rgba(153, 102, 255, 1)'
+        );
+    
+        // Applicants per Job Listing Chart
+        createChart(
+            document.getElementById('jobListingsWithApplicantsChart').getContext('2d'),
+            'bar',
+            jobListingsWithApplicantsData.map(item => item.jobidlinkedin),
+            jobListingsWithApplicantsData.map(item => item.applicants),
+            'Number of Applicants',
+            'rgba(255, 159, 64, 0.2)',
+            'rgba(255, 159, 64, 1)'
+        );
+    
+        // Job Listings by Promotion Status Chart
+        createChart(
+            document.getElementById('promotionEffectivenessChart').getContext('2d'),
+            'bar',
+            promotionEffectivenessData.map(item => item.promoted_status),
+            promotionEffectivenessData.map(item => item.job_count),
+            'Number of Job Listings',
+            'rgba(255, 99, 132, 0.2)',
+            'rgba(255, 99, 132, 1)'
+        );
+    
+        // Remote vs On-site Job Listings Chart
+        createChart(
+            document.getElementById('remoteVsOnsiteChart').getContext('2d'),
+            'bar',
+            remoteVsOnsiteData.map(item => item.remote_status),
+            remoteVsOnsiteData.map(item => item.job_count),
+            'Number of Job Listings',
+            'rgba(54, 162, 235, 0.2)',
+            'rgba(54, 162, 235, 1)'
+        );
+    
+        // Job Listings Over Time Chart
+        createChart(
+            document.getElementById('jobListingsOverTimeChart').getContext('2d'),
+            'line',
+            jobListingsOverTimeData.map(item => item.scrapping_date),
+            jobListingsOverTimeData.map(item => item.job_count),
+            'Number of Job Listings',
+            'rgba(75, 192, 192, 0.2)',
+            'rgba(75, 192, 192, 1)'
+        );
+    });
+</script>
+{% endblock %}
