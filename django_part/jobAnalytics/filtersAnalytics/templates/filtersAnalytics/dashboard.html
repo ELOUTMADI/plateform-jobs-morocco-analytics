@@ -9,6 +9,9 @@
         height: 300px;
         margin-bottom: 2rem;
     }
+
+
+
 </style>
 {% endblock %}
 
@@ -20,14 +23,14 @@
         <form id="filterForm" method="get" action="{% url 'dashboard' %}" class="flex flex-wrap items-center">
             <div class="mr-4 mb-2">
                 <label for="date_range" class="block text-sm font-medium text-gray-700">Date Range</label>
-                <input type="text" id="date_range" name="date_range" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="All Time" />
+                <input type="text" id="date_range" name="date_range" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="All Time" value="{{ request.GET.date_range }}" />
             </div>
             <div class="mr-4 mb-2">
                 <label for="company" class="block text-sm font-medium text-gray-700">Company</label>
                 <select id="company" name="company" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                     <option value="">All Companies</option>
                     {% for company in companies %}
-                    <option value="{{ company.company_name }}">{{ company.company_name }}</option>
+                    <option value="{{ company.company_name }}" {% if company.company_name == request.GET.company %}selected{% endif %}>{{ company.company_name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -36,7 +39,7 @@
                 <select id="job_type" name="job_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                     <option value="">All Job Types</option>
                     {% for job_type in job_types %}
-                    <option value="{{ job_type.job_type }}">{{ job_type.job_type }}</option>
+                    <option value="{{ job_type.job_type }}"  {% if job_type.job_type == request.GET.job_type %}selected{% endif %}>{{ job_type.job_type }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -45,7 +48,7 @@
                 <select id="location" name="location" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                     <option value="">All Locations</option>
                     {% for location in locations %}
-                    <option value="{{ location.city }}">{{ location.city }}</option>
+                    <option value="{{ location.city }}" {% if location.city == request.GET.location %}selected{% endif %}>{{ location.city }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -53,6 +56,9 @@
                 <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     Filter
                 </button>
+                <a href="{% url 'dashboard' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                    Reset
+                </a>
             </div>
         </form>
     </div>
@@ -101,6 +107,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="bg-white rounded-lg shadow p-4">
             <h3 class="text-lg font-semibold mb-4">Job Listings by Company</h3>
+
             <div class="chart-container">
                 <canvas id="jobCountByCompanyChart"></canvas>
             </div>
@@ -183,13 +190,9 @@
                 <canvas id="topCompaniesByJobPostingsChart"></canvas>
             </div>
         </div>
-        <div class="bg-white rounded-lg shadow p-4">
-            <h3 class="text-lg font-semibold mb-4">Job Distribution by City</h3>
-            <div class="chart-container">
-                <canvas id="jobDistributionByCityChart"></canvas>
-            </div>
-        </div>
     </div>
+
+
 {% endblock %}
 
 {% block extra_js %}
@@ -243,7 +246,7 @@
 
         // Data for charts
         const jobCountByCompanyData = {{ job_count_by_company_data|safe }};
-        const jobCountByLocationData = {{ job_count_by_location_data|safe }};
+        const jobCountByLocationData = {{ job_distribution_by_city_data|safe }};
         const jobCountBySectorData = {{ job_count_by_sector_data|safe }};
         const jobCountByJobTypeData = {{ job_count_by_job_type_data|safe }};
         const jobListingsWithApplicantsData = {{ job_listings_with_applicants_data|safe }};
@@ -270,9 +273,9 @@
             'bar',
             jobCountByLocationData.map(item => item.city),
             jobCountByLocationData.map(item => item.job_count),
-            'Number of Job Listings',
-            'rgba(54, 162, 235, 0.2)',
-            'rgba(54, 162, 235, 1)'
+            'Job Distribution by City',
+            '#ff6384',
+            '#ff6384'
         );
 
         // Job Listings by Sector Chart
@@ -462,16 +465,6 @@
             '#4bc0c0'
         );
 
-        const jobDistributionByCityData = {{ job_distribution_by_city_data|safe }};
-        createChart(
-            document.getElementById('jobDistributionByCityChart').getContext('2d'),
-            'bar',
-            jobDistributionByCityData.map(item => item.city),
-            jobDistributionByCityData.map(item => item.job_count),
-            'Job Distribution by City',
-            '#ff6384',
-            '#ff6384'
-        );
 
     });
 
